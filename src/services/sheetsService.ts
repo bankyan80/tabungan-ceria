@@ -8,7 +8,7 @@ import {
   type UserRole
 } from '../types';
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyxkF-ao7Mpw8sfSGVVjv2xKMtpKj-1I14I012LFKuC1x3q9e4ZXNCmGyfDNJ7YbGZp5w/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4td9TMXgZd45Ac02wPItZvG2VZ6AhIojcNBPw1JVrsIx__cN2ZIPHzs7lpRDJ3uRTLA/exec';
 
 // Role-based access control helper
 function checkPermission(
@@ -38,13 +38,12 @@ function checkPermission(
   }
 }
 
-// Apps Script API helper — always POST to avoid doGet issues
+// Apps Script API helper — GET with params (avoids 302 redirect issue with POST)
 async function callAppsScript(action: string, payload: Record<string, unknown> = {}): Promise<unknown> {
-  const res = await fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action, ...payload })
-  });
+  const bodyJson = JSON.stringify({ action, ...payload });
+  const url = `${APPS_SCRIPT_URL}?action=${encodeURIComponent(action)}&body=${encodeURIComponent(bodyJson)}`;
+  
+  const res = await fetch(url);
   
   if (!res.ok) {
     throw new Error(`Apps Script error: ${res.statusText}`);

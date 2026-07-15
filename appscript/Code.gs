@@ -65,10 +65,15 @@ const INITIAL_LOG_AUDIT = [
 // ─── WEB APP ENTRY POINTS ───────────────────────────────────────────────────
 
 function doGet(e) {
-  var action = '';
-  try { action = e.parameter.action || ''; } catch(err) {}
-  if (!action) return jsonResponse({ success: false, error: 'Use POST method' });
-  return handleAction(action, {});
+  try {
+    var action = e.parameter.action || '';
+    var bodyStr = e.parameter.body || '{}';
+    var body = {};
+    try { body = JSON.parse(bodyStr); } catch(ex) {}
+    return handleAction(action, body);
+  } catch(err) {
+    return jsonResponse({ success: false, error: err.message || String(err) });
+  }
 }
 
 function doPost(e) {
@@ -230,10 +235,13 @@ function loadAllData() {
   var ss = getOrCreateSpreadsheet();
   var result = {};
   
+  var keyMap = { 'Log_Audit': 'logs' };
+  
   SHEET_NAMES.forEach(function(sheetName) {
     var sheet = getOrCreateSheet(ss, sheetName);
     ensureHeaders(sheet, sheetName);
-    result[sheetName.toLowerCase()] = sheetToObjects(sheet, sheetName);
+    var key = keyMap[sheetName] || sheetName.toLowerCase();
+    result[key] = sheetToObjects(sheet, sheetName);
   });
   
   return result;
