@@ -138,8 +138,15 @@ function getOrCreateSheet(ss, sheetName) {
 }
 
 function ensureHeaders(sheet, sheetName) {
-  var existingHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var lastCol = sheet.getLastColumn();
   var expectedHeaders = HEADERS[sheetName];
+  
+  if (lastCol === 0) {
+    sheet.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
+    return;
+  }
+  
+  var existingHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
   
   if (existingHeaders.length === 0 || existingHeaders[0] === '') {
     sheet.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
@@ -150,7 +157,7 @@ function sheetToObjects(sheet, sheetName) {
   var lastRow = sheet.getLastRow();
   var lastCol = sheet.getLastColumn();
   
-  if (lastRow <= 1) return [];
+  if (lastRow <= 1 || lastCol === 0) return [];
   
   var headers = HEADERS[sheetName];
   var data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
