@@ -242,10 +242,7 @@ export const Login: React.FC<LoginProps> = ({
     const pinVal = pin.trim();
 
     if (!inputVal) {
-      const fieldName = 
-        activeTab === 'wali_siswa' ? 'NIK / NISN Siswa' : 
-        activeTab === 'wali_kelas' ? 'NIP / NIK Guru' : 'NPSN Sekolah';
-      setError(`${fieldName} tidak boleh kosong!`);
+      setError("NIK / NISN / NIP / NPSN tidak boleh kosong!");
       return;
     }
 
@@ -254,23 +251,61 @@ export const Login: React.FC<LoginProps> = ({
       return;
     }
 
-    if (activeTab === 'wali_siswa') {
-      // Find Student with this NIK/NISN
-      const matchedSiswa = database.siswa.find(
-        s => s.nisn === inputVal || s.siswa_id === inputVal
-      );
+    // Auto-detect role from credential — try all three roles
+    // 1. Try Wali Kelas (NIP, email, or user_id)
+    const matchedTeacher = database.users.find(u => {
+      if (u.role !== 'wali_kelas') return false;
+      const nip = getNipForWaliKelas(u);
+      return nip === inputVal || u.email.toLowerCase() === inputVal.toLowerCase() || u.user_id === inputVal;
+    });
 
-      if (!matchedSiswa) {
-        setError("NIK/NISN Siswa tidak ditemukan dalam database sekolah. Silakan periksa kembali atau lakukan registrasi akun baru.");
+    if (matchedTeacher) {
+      if (matchedTeacher.status === 'nonaktif') {
+        setError("Status akun Guru nonaktif. Silakan hubungi Kepala Sekolah.");
         return;
       }
+      const nip = getNipForWaliKelas(matchedTeacher);
+      const expectedPin = nip.slice(-4);
+      if (pinVal !== expectedPin) {
+        setError("PIN / Sandi Akses salah. Gunakan 4 digit terakhir NIP sebagai PIN.");
+        return;
+      }
+      setActiveTab('wali_kelas');
+      onLogin(matchedTeacher);
+      return;
+    }
 
-      // Find if there is a pre-existing parent user
+    // 2. Try Kepala Sekolah (NPSN)
+    if (inputVal === '20103244') {
+      const expectedPin = inputVal.slice(-4);
+      if (pinVal !== expectedPin) {
+        setError("PIN / Sandi Akses salah. Gunakan 4 digit terakhir NPSN sebagai PIN.");
+        return;
+      }
+      const matchedKepsek = database.users.find(u => u.role === 'kepala_sekolah') || {
+        user_id: "U-104",
+        nama: "Drs. H. Mulyono",
+        email: "kepala_sekolah@sekolah.id",
+        role: "kepala_sekolah" as const,
+        kelas_id: "",
+        siswa_id: "",
+        status: "aktif" as const
+      };
+      setActiveTab('kepala_sekolah');
+      onLogin(matchedKepsek);
+      return;
+    }
+
+    // 3. Try Wali Siswa (NISN or siswa_id)
+    const matchedSiswa = database.siswa.find(
+      s => s.nisn === inputVal || s.siswa_id === inputVal
+    );
+
+    if (matchedSiswa) {
       let matchedUser = database.users.find(
         u => u.role === 'wali_siswa' && u.siswa_id === matchedSiswa.siswa_id
       );
 
-      // If no pre-existing parent user is found, create one dynamically
       if (!matchedUser) {
         matchedUser = {
           user_id: `U-WALI-${matchedSiswa.siswa_id}`,
@@ -288,70 +323,18 @@ export const Login: React.FC<LoginProps> = ({
         return;
       }
 
-      // Validate PIN: for demo, PIN must match the last 4 digits of NISN
       const expectedPin = matchedSiswa.nisn.slice(-4);
       if (pinVal !== expectedPin) {
         setError("PIN / Sandi Akses salah. Gunakan 4 digit terakhir NISN sebagai PIN.");
         return;
       }
-
+      setActiveTab('wali_siswa');
       onLogin(matchedUser);
-
-    } else if (activeTab === 'wali_kelas') {
-      // Find Teacher matching NIP/NIK, Email, or User ID
-      const matchedTeacher = database.users.find(u => {
-        if (u.role !== 'wali_kelas') return false;
-        const nip = getNipForWaliKelas(u);
-        return nip === inputVal || u.email.toLowerCase() === inputVal.toLowerCase() || u.user_id === inputVal;
-      });
-
-      if (!matchedTeacher) {
-        setError("NIP/NIK Guru tidak terdaftar atau tidak cocok dengan database kami.");
-        return;
-      }
-
-      if (matchedTeacher.status === 'nonaktif') {
-        setError("Status akun Guru nonaktif. Silakan hubungi Kepala Sekolah.");
-        return;
-      }
-
-      // Validate PIN: for demo, PIN must match last 4 digits of NIP
-      const nip = getNipForWaliKelas(matchedTeacher);
-      const expectedPin = nip.slice(-4);
-      if (pinVal !== expectedPin) {
-        setError("PIN / Sandi Akses salah. Gunakan 4 digit terakhir NIP sebagai PIN.");
-        return;
-      }
-
-      onLogin(matchedTeacher);
-
-    } else if (activeTab === 'kepala_sekolah') {
-      // Verify NPSN
-      if (inputVal !== '20103244') {
-        setError("NPSN Sekolah tidak terdaftar atau tidak valid. Silakan gunakan NPSN Demo: 20103244.");
-        return;
-      }
-
-      // Validate PIN: for demo, PIN must be last 4 digits of NPSN
-      const expectedPin = inputVal.slice(-4);
-      if (pinVal !== expectedPin) {
-        setError("PIN / Sandi Akses salah. Gunakan 4 digit terakhir NPSN sebagai PIN.");
-        return;
-      }
-
-      // Find Kepala Sekolah user
-      const matchedKepsek = database.users.find(u => u.role === 'kepala_sekolah') || {
-        user_id: "U-104",
-        nama: "Drs. H. Mulyono",
-        email: "kepala_sekolah@sekolah.id",
-        role: "kepala_sekolah" as const,
-        kelas_id: "",
-        siswa_id: "",
-        status: "aktif" as const
-      };
-
-      onLogin(matchedKepsek);
+      return;
     }
+
+    // No match found
+    setError("Kredensial tidak ditemukan. Silakan periksa kembali atau lakukan registrasi akun baru.");
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
