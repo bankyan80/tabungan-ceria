@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { 
   Users, 
   Plus, 
@@ -12,7 +12,9 @@ import {
   Trash2, 
   AlertTriangle,
   Download,
-  Search
+  Search,
+  Camera,
+  RotateCcw
 } from 'lucide-react';
 import { 
   type DatabaseState, 
@@ -27,7 +29,7 @@ interface WaliKelasDashboardProps {
   kelasId: string;
   database: DatabaseState;
   onAddSiswa: (name: string, nisn: string, status: SiswaStatus) => Promise<void>;
-  onAddTransaksi: (siswaId: string, jenis: TransaksiJenis, nominal: number, keterangan: string) => Promise<void>;
+  onAddTransaksi: (siswaId: string, jenis: TransaksiJenis, nominal: number, keterangan: string, foto?: string) => Promise<void>;
   onCancelTransaksi: (transaksiId: string, alasan: string) => Promise<void>;
   userEmail: string | null;
 }
@@ -80,6 +82,57 @@ export const WaliKelasDashboard: React.FC<WaliKelasDashboardProps> = ({
   // Loading indicator states
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Photo capture states
+  const [txFoto, setTxFoto] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const startCamera = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } } 
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setShowCamera(true);
+    } catch {
+      alert("Tidak dapat mengakses kamera. Pastikan izin kamera diberikan.");
+    }
+  }, []);
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    setShowCamera(false);
+  }, []);
+
+  const capturePhoto = useCallback(() => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const maxW = 400;
+    const scale = maxW / video.videoWidth;
+    canvas.width = maxW;
+    canvas.height = video.videoHeight * scale;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+      setTxFoto(dataUrl);
+    }
+    stopCamera();
+  }, [stopCamera]);
+
+  const removePhoto = useCallback(() => {
+    setTxFoto(null);
+  }, []);
+
   // Filter students based on search term
   const filteredStudents = classStudents.filter(s => 
     s.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -129,9 +182,10 @@ export const WaliKelasDashboard: React.FC<WaliKelasDashboardProps> = ({
 
     setIsSubmitting(true);
     try {
-      await onAddTransaksi(selectedStudentForTx.siswa_id, txType, nominalNum, txKeterangan);
+      await onAddTransaksi(selectedStudentForTx.siswa_id, txType, nominalNum, txKeterangan, txFoto || undefined);
       setTxNominal('');
       setTxKeterangan('');
+      setTxFoto(null);
       setShowTransactionModal(false);
       setSelectedStudentForTx(null);
     } catch (err: unknown) {
@@ -177,6 +231,9 @@ export const WaliKelasDashboard: React.FC<WaliKelasDashboardProps> = ({
     setTxType(type);
     setTxNominal('');
     setTxKeterangan(type === 'setor' ? 'Setoran mingguan rutin' : 'Kebutuhan membeli buku/alat tulis');
+    setTxFoto(null);
+    setShowCamera(false);
+    stopCamera();
     setShowTransactionModal(true);
   };
 
@@ -542,7 +599,7 @@ export const WaliKelasDashboard: React.FC<WaliKelasDashboardProps> = ({
                 <h4 className="font-display font-black text-lg mt-0.5">{selectedStudentForTx.nama}</h4>
               </div>
               <button 
-                onClick={() => setShowTransactionModal(false)}
+                onClick={() => { stopCamera(); setShowTransactionModal(false); }}
                 className="p-1 hover:bg-white/15 rounded-lg cursor-pointer"
               >
                 <X size={16} />
@@ -550,6 +607,14 @@ export const WaliKelasDashboard: React.FC<WaliKelasDashboardProps> = ({
             </div>
             <form onSubmit={handleTransactionSubmit} className="p-5 space-y-4">
               
+              {/* Auto date & time */}
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center text-xs font-bold">
+                <span className="text-slate-400">Tanggal & Waktu</span>
+                <span className="text-slate-700 font-extrabold font-mono">
+                  {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })} • {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </span>
+              </div>
+
               {/* Display balance context */}
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex justify-between items-center text-xs font-bold">
                 <span className="text-slate-400">Saldo Siswa Saat Ini:</span>
@@ -579,10 +644,60 @@ export const WaliKelasDashboard: React.FC<WaliKelasDashboardProps> = ({
                 />
               </div>
 
+              {/* Photo Capture Section */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Foto Bukti Transaksi</label>
+                
+                {txFoto ? (
+                  <div className="relative">
+                    <img src={txFoto} alt="Foto bukti transaksi" className="w-full h-48 object-cover rounded-xl border border-slate-200" />
+                    <button
+                      type="button"
+                      onClick={removePhoto}
+                      className="absolute top-2 right-2 bg-rose-600 hover:bg-rose-700 text-white p-1.5 rounded-lg shadow-lg cursor-pointer"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ) : showCamera ? (
+                  <div className="relative rounded-xl overflow-hidden border border-slate-200">
+                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-48 object-cover bg-black" />
+                    <canvas ref={canvasRef} className="hidden" />
+                    <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-3">
+                      <button
+                        type="button"
+                        onClick={capturePhoto}
+                        className="bg-white hover:bg-slate-100 text-slate-900 p-3 rounded-full shadow-lg border-2 border-slate-900 cursor-pointer"
+                        title="Ambil Foto"
+                      >
+                        <Camera size={20} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={stopCamera}
+                        className="bg-rose-600 hover:bg-rose-700 text-white p-3 rounded-full shadow-lg cursor-pointer"
+                        title="Tutup Kamera"
+                      >
+                        <X size={20} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startCamera}
+                    className="w-full border-2 border-dashed border-slate-300 hover:border-sky-400 hover:bg-sky-50 text-slate-400 hover:text-sky-600 py-6 rounded-xl transition-all cursor-pointer flex flex-col items-center gap-2"
+                  >
+                    <Camera size={24} strokeWidth={2} />
+                    <span className="text-xs font-bold uppercase tracking-wider">Ambil Foto dari Kamera</span>
+                  </button>
+                )}
+              </div>
+
               <div className="pt-3 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowTransactionModal(false)}
+                  onClick={() => { stopCamera(); setShowTransactionModal(false); }}
                   className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all cursor-pointer"
                 >
                   Batal

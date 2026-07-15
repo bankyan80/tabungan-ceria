@@ -25,7 +25,7 @@ const HEADERS = {
   Users: ['user_id', 'nama', 'email', 'role', 'kelas_id', 'siswa_id', 'status', 'provinsi', 'kabupaten', 'kecamatan', 'sekolah'],
   Kelas: ['kelas_id', 'nama_kelas', 'wali_kelas_id', 'tahun_ajaran'],
   Siswa: ['siswa_id', 'nama', 'nisn', 'kelas_id', 'saldo', 'status', 'provinsi', 'kabupaten', 'kecamatan', 'sekolah'],
-  Transaksi: ['transaksi_id', 'siswa_id', 'tanggal', 'jenis', 'nominal', 'saldo_setelah', 'keterangan', 'input_by', 'timestamp'],
+  Transaksi: ['transaksi_id', 'siswa_id', 'tanggal', 'jenis', 'nominal', 'saldo_setelah', 'keterangan', 'input_by', 'timestamp', 'foto'],
   Log_Audit: ['log_id', 'user_id', 'aksi', 'target', 'detail_sebelum', 'detail_sesudah', 'timestamp']
 };
 

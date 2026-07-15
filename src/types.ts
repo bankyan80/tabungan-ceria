@@ -47,6 +47,7 @@ export interface TransaksiRow {
   keterangan: string;
   input_by: string; // email/name or user_id
   timestamp: string; // YYYY-MM-DD HH:mm:ss
+  foto?: string; // base64 data URL of captured photo
 }
 
 export interface LogAuditRow {

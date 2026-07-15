@@ -220,7 +220,7 @@ export default function App() {
   };
 
   // Business logic callback: Add Transaction
-  const handleAddTransaksi = async (siswaId: string, jenis: TransaksiJenis, nominal: number, keterangan: string) => {
+  const handleAddTransaksi = async (siswaId: string, jenis: TransaksiJenis, nominal: number, keterangan: string, foto?: string) => {
     const newTx: TransaksiRow = {
       transaksi_id: "T-" + crypto.randomUUID().slice(0, 8),
       siswa_id: siswaId,
@@ -230,7 +230,8 @@ export default function App() {
       saldo_setelah: 0, // will be computed in service
       keterangan: keterangan,
       input_by: loggedInUser?.email || userEmail || 'wali_kelas_demo@school.id',
-      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      foto: foto
     };
 
     await sheetsService.createTransaksi(newTx, loggedInUser?.email || userEmail || 'demo_operator', currentRole);
