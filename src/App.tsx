@@ -57,13 +57,35 @@ export default function App() {
     return 'S-101';
   });
 
-  // Core Database State
-  const [database, setDatabase] = useState<DatabaseState>({
-    users: [],
-    kelas: [],
-    siswa: [],
-    transaksi: [],
-    logs: []
+  // Core Database State — initialize synchronously from local storage so Login works immediately
+  const [database, setDatabase] = useState<DatabaseState>(() => {
+    try {
+      const saved = localStorage.getItem('tabungan_ceria_local_db');
+      if (saved) {
+        const parsed = JSON.parse(saved) as DatabaseState;
+        if (parsed.users?.length > 0) return parsed;
+      }
+    } catch {}
+    return {
+      users: [
+        { user_id: "U-101", nama: "Ahmad Subarjo", email: "wali_kelas_1@example.com", role: "wali_kelas", kelas_id: "K-101", siswa_id: "", status: "aktif" },
+        { user_id: "U-102", nama: "Siti Rahma", email: "wali_kelas_2@example.com", role: "wali_kelas", kelas_id: "K-102", siswa_id: "", status: "aktif" },
+        { user_id: "U-103", nama: "Rudi Pratama", email: "wali_siswa_1@example.com", role: "wali_siswa", kelas_id: "", siswa_id: "S-101", status: "aktif" },
+        { user_id: "U-104", nama: "Drs. H. Mulyono", email: "kepala_sekolah@example.com", role: "kepala_sekolah", kelas_id: "", siswa_id: "", status: "aktif" }
+      ],
+      kelas: [
+        { kelas_id: "K-101", nama_kelas: "Kelas 6A", wali_kelas_id: "wali_kelas_1@example.com", tahun_ajaran: "2026/2027" },
+        { kelas_id: "K-102", nama_kelas: "Kelas 6B", wali_kelas_id: "wali_kelas_2@example.com", tahun_ajaran: "2026/2027" }
+      ],
+      siswa: [
+        { siswa_id: "S-101", nama: "Adit Pratama", nisn: "0012345678", kelas_id: "K-101", saldo: 150000, status: "aktif" },
+        { siswa_id: "S-102", nama: "Budi Santoso", nisn: "0023456789", kelas_id: "K-101", saldo: 75000, status: "aktif" },
+        { siswa_id: "S-103", nama: "Citra Lestari", nisn: "0034567890", kelas_id: "K-101", saldo: 200000, status: "aktif" },
+        { siswa_id: "S-104", nama: "Dina Amalia", nisn: "0045678901", kelas_id: "K-102", saldo: 50000, status: "aktif" }
+      ],
+      transaksi: [],
+      logs: []
+    };
   });
 
   // Load database on load (either from sheets if connected, or local storage fallback)

@@ -298,7 +298,7 @@ export const Login: React.FC<LoginProps> = ({
 
     // 3. Try Wali Siswa (NISN or siswa_id)
     const matchedSiswa = database.siswa.find(
-      s => s.nisn === inputVal || s.siswa_id === inputVal
+      s => s.nisn === inputVal || s.nisn === String(Number(inputVal)) || String(Number(s.nisn)) === inputVal || s.siswa_id === inputVal
     );
 
     if (matchedSiswa) {
