@@ -17,7 +17,7 @@
  *   POST ?action=cancelTransaksi - Cancel a transaction
  */
 
-const SPREADSHEET_NAME = 'Tabungan Ceria Database';
+const SPREADSHEET_ID = '11V4W2g9DEFzxYyM10nj302JLCAKiMTTuaj9G3qWQUxQ';
 
 const SHEET_NAMES = ['Users', 'Kelas', 'Siswa', 'Transaksi', 'Log_Audit'];
 
@@ -125,14 +125,7 @@ function jsonResponse(data) {
 // ─── SPREADSHEET HELPERS ────────────────────────────────────────────────────
 
 function getOrCreateSpreadsheet() {
-  var files = DriveApp.getFilesByName(SPREADSHEET_NAME);
-  if (files.hasNext()) {
-    var file = files.next();
-    return SpreadsheetApp.openById(file.getId());
-  }
-  
-  var ss = SpreadsheetApp.create(SPREADSHEET_NAME);
-  return ss;
+  return SpreadsheetApp.openById(SPREADSHEET_ID);
 }
 
 function getOrCreateSheet(ss, sheetName) {

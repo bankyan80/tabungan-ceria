@@ -8,7 +8,7 @@ import {
   type UserRole
 } from '../types';
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw5UeqAD4RmutRMFu7EOqE5IOSSo2zaWRhO7tL3lJBAx4wJ0BxopNG190GDaf7Y0Bz41g/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwhT8gRIoCTAwwpI20K46LPY5y77ttT0ew330dN3tVao4Ixie9qR_CtIJ_IC7dk6QB2mA/exec';
 
 // Role-based access control helper
 function checkPermission(
