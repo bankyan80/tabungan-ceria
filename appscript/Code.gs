@@ -65,28 +65,24 @@ const INITIAL_LOG_AUDIT = [
 // ─── WEB APP ENTRY POINTS ───────────────────────────────────────────────────
 
 function doGet(e) {
-  return handleRequest(e, 'GET');
+  var action = '';
+  try { action = e.parameter.action || ''; } catch(err) {}
+  if (!action) return jsonResponse({ success: false, error: 'Use POST method' });
+  return handleAction(action, {});
 }
 
 function doPost(e) {
-  return handleRequest(e, 'POST');
+  var body = {};
+  try {
+    body = JSON.parse(e.postData.contents);
+  } catch (err) {
+    return jsonResponse({ success: false, error: 'Invalid JSON body: ' + err.message });
+  }
+  var action = body.action || '';
+  return handleAction(action, body);
 }
 
-function handleRequest(e, method) {
-  var action = '';
-  
-  if (method === 'GET') {
-    action = e.parameter.action || '';
-  } else if (method === 'POST') {
-    var body = {};
-    try {
-      body = JSON.parse(e.postData.contents);
-    } catch (err) {
-      return jsonResponse({ success: false, error: 'Invalid JSON body: ' + err.message });
-    }
-    action = body.action || e.parameter.action || '';
-  }
-
+function handleAction(action, body) {
   try {
     switch (action) {
       case 'init':
@@ -94,26 +90,26 @@ function handleRequest(e, method) {
       case 'load':
         return jsonResponse({ success: true, data: loadAllData() });
       case 'addUser':
-        return jsonResponse({ success: true, data: addUser(method === 'POST' ? JSON.parse(e.postData.contents) : e.parameter) });
+        return jsonResponse({ success: true, data: addUser(body) });
       case 'updateUser':
-        return jsonResponse({ success: true, data: updateUser(method === 'POST' ? JSON.parse(e.postData.contents) : e.parameter) });
+        return jsonResponse({ success: true, data: updateUser(body) });
       case 'addKelas':
-        return jsonResponse({ success: true, data: addKelas(method === 'POST' ? JSON.parse(e.postData.contents) : e.parameter) });
+        return jsonResponse({ success: true, data: addKelas(body) });
       case 'updateKelas':
-        return jsonResponse({ success: true, data: updateKelas(method === 'POST' ? JSON.parse(e.postData.contents) : e.parameter) });
+        return jsonResponse({ success: true, data: updateKelas(body) });
       case 'addSiswa':
-        return jsonResponse({ success: true, data: addSiswa(method === 'POST' ? JSON.parse(e.postData.contents) : e.parameter) });
+        return jsonResponse({ success: true, data: addSiswa(body) });
       case 'updateSiswa':
-        return jsonResponse({ success: true, data: updateSiswa(method === 'POST' ? JSON.parse(e.postData.contents) : e.parameter) });
+        return jsonResponse({ success: true, data: updateSiswa(body) });
       case 'createTransaksi':
-        return jsonResponse({ success: true, data: createTransaksi(method === 'POST' ? JSON.parse(e.postData.contents) : e.parameter) });
+        return jsonResponse({ success: true, data: createTransaksi(body) });
       case 'cancelTransaksi':
-        return jsonResponse({ success: true, data: cancelTransaksi(method === 'POST' ? JSON.parse(e.postData.contents) : e.parameter) });
+        return jsonResponse({ success: true, data: cancelTransaksi(body) });
       default:
         return jsonResponse({ success: false, error: 'Unknown action: ' + action });
     }
   } catch (err) {
-    return jsonResponse({ success: false, error: err.message });
+    return jsonResponse({ success: false, error: err.message || String(err) });
   }
 }
 

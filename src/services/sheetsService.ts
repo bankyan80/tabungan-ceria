@@ -8,7 +8,7 @@ import {
   type UserRole
 } from '../types';
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwhT8gRIoCTAwwpI20K46LPY5y77ttT0ew330dN3tVao4Ixie9qR_CtIJ_IC7dk6QB2mA/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyxkF-ao7Mpw8sfSGVVjv2xKMtpKj-1I14I012LFKuC1x3q9e4ZXNCmGyfDNJ7YbGZp5w/exec';
 
 // Role-based access control helper
 function checkPermission(
@@ -38,45 +38,12 @@ function checkPermission(
   }
 }
 
-// Apps Script API helper
-async function callAppsScript(action: string, body?: Record<string, unknown>): Promise<unknown> {
-  const payload = body ? { action, ...body } : { action };
-  
+// Apps Script API helper — always POST to avoid doGet issues
+async function callAppsScript(action: string, payload: Record<string, unknown> = {}): Promise<unknown> {
   const res = await fetch(APPS_SCRIPT_URL, {
     method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(payload)
-  });
-  
-  // Apps Script with mode:'no-cors' won't return readable response
-  // We need to use redirect=studio or parse differently
-  // For Apps Script web apps, GET with action param works better
-  
-  const getUrl = `${APPS_SCRIPT_URL}?action=${action}`;
-  const getRes = await fetch(getUrl);
-  
-  if (!getRes.ok) {
-    throw new Error(`Apps Script error: ${getRes.statusText}`);
-  }
-  
-  const data = await getRes.json();
-  if (!data.success) {
-    throw new Error(data.error || 'Unknown Apps Script error');
-  }
-  
-  return data.data;
-}
-
-async function postToAppsScript(action: string, payload: Record<string, unknown>): Promise<unknown> {
-  const body = JSON.stringify({ action, ...payload });
-  
-  // Use redirect=studio to avoid CORS issues with Apps Script
-  const url = `${APPS_SCRIPT_URL}?action=${action}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: body
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action, ...payload })
   });
   
   if (!res.ok) {
@@ -208,7 +175,7 @@ export class SheetsService {
     
     if (this.isCloudConnected) {
       try {
-        await postToAppsScript('addUser', { user });
+        await callAppsScript('addUser', { user });
       } catch (err) {
         console.error("Gagal sync user ke cloud:", err);
       }
@@ -224,7 +191,7 @@ export class SheetsService {
     
     if (this.isCloudConnected) {
       try {
-        await postToAppsScript('updateUser', { user });
+        await callAppsScript('updateUser', { user });
       } catch (err) {
         console.error("Gagal sync update user ke cloud:", err);
       }
@@ -237,7 +204,7 @@ export class SheetsService {
     
     if (this.isCloudConnected) {
       try {
-        await postToAppsScript('addKelas', { kelas });
+        await callAppsScript('addKelas', { kelas });
       } catch (err) {
         console.error("Gagal sync kelas ke cloud:", err);
       }
@@ -253,7 +220,7 @@ export class SheetsService {
     
     if (this.isCloudConnected) {
       try {
-        await postToAppsScript('updateKelas', { kelas });
+        await callAppsScript('updateKelas', { kelas });
       } catch (err) {
         console.error("Gagal sync update kelas ke cloud:", err);
       }
@@ -270,7 +237,7 @@ export class SheetsService {
     
     if (this.isCloudConnected) {
       try {
-        await postToAppsScript('addSiswa', { siswa });
+        await callAppsScript('addSiswa', { siswa });
       } catch (err) {
         console.error("Gagal sync siswa ke cloud:", err);
       }
@@ -286,7 +253,7 @@ export class SheetsService {
     
     if (this.isCloudConnected) {
       try {
-        await postToAppsScript('updateSiswa', { siswa });
+        await callAppsScript('updateSiswa', { siswa });
       } catch (err) {
         console.error("Gagal sync update siswa ke cloud:", err);
       }
@@ -340,7 +307,7 @@ export class SheetsService {
 
     if (this.isCloudConnected) {
       try {
-        await postToAppsScript('createTransaksi', { transaksi });
+        await callAppsScript('createTransaksi', { transaksi });
       } catch (err) {
         console.error("Gagal sync transaksi ke cloud:", err);
       }
@@ -392,7 +359,7 @@ export class SheetsService {
 
     if (this.isCloudConnected) {
       try {
-        await postToAppsScript('cancelTransaksi', { 
+        await callAppsScript('cancelTransaksi', { 
           transaksi_id: transaksiId, 
           alasan, 
           operator_id: operatorId 
